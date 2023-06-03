@@ -1,0 +1,62 @@
+import tweepy
+from textblob import TextBlob
+
+# Twitter API credentials
+consumer_key = "YOUR_CONSUMER_KEY"
+consumer_secret = "YOUR_CONSUMER_SECRET"
+access_token = "YOUR_ACCESS_TOKEN"
+access_token_secret = "YOUR_ACCESS_TOKEN_SECRET"
+
+# Authenticate with Twitter API
+auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+auth.set_access_token(access_token, access_token_secret)
+api = tweepy.API(auth)
+
+def analyze_sentiment(text):
+    analysis = TextBlob(text)
+    polarity = analysis.sentiment.polarity
+
+    if polarity > 0:
+        return "positive"
+    elif polarity < 0:
+        return "negative"
+    else:
+        return "neutral"
+
+def analyze_tweet(tweet):
+    tweet_text = tweet.text
+    print("Tweet:", tweet_text)
+
+    comments = []
+    for comment in tweepy.Cursor(api.search, q='to:'+tweet.user.screen_name, result_type='recent').items(100):
+        if hasattr(comment, 'in_reply_to_status_id_str'):
+            if (comment.in_reply_to_status_id_str == tweet.id_str):
+                comments.append(comment.text)
+
+    print("Total Comments:", len(comments))
+
+    positive_count = 0
+    negative_count = 0
+    neutral_count = 0
+
+    for comment in comments:
+        sentiment = analyze_sentiment(comment)
+        if sentiment == "positive":
+            positive_count += 1
+        elif sentiment == "negative":
+            negative_count += 1
+        else:
+            neutral_count += 1
+
+    print("Positive Comments:", positive_count)
+    print("Negative Comments:", negative_count)
+    print("Neutral Comments:", neutral_count)
+
+# Get the tweet ID from the user
+tweet_id = input("Enter the tweet ID: ")
+
+try:
+    tweet = api.get_status(tweet_id)
+    analyze_tweet(tweet)
+except tweepy.error.TweepError as e:
+    print("Error: ", e)
